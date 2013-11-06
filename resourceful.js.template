@@ -1,0 +1,24 @@
+var manifest = {{manifest}};
+var bundle = "{{bundle}}";
+var findTagByRegexp = function findTagByRegexp(tag, regexp, parentNode) {
+    var elements = Array.prototype.slice.call((parentNode || document).getElementsByTagName(tag));
+    var length = elements.length;
+    var ret = [];
+    for (var i = 0; i < length; i++) {
+        if (elements[i].src.search("."+regexp) != -1) {
+            ret.push(elements[i]);
+        }
+    }
+    return ret;
+};
+var install = function install() {
+    console.log("Installing assets.");
+    var matching_elems = "";
+    for (var i = 0; i < manifest.length; i++) {
+        matching_elems = findTagByRegexp('img', manifest[i][0]);
+        for (var j = 0; j < matching_elems.length; j++) {
+            src = 'data:' + manifest[i][1] + ',' + bundle.slice(manifest[i][2], manifest[i][3]);
+            matching_elems[j].src = src;
+        }
+    }
+};

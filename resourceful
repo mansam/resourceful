@@ -1,0 +1,68 @@
+#!/usr/bin/env python
+
+import os
+import sys
+
+mime_mapping = {
+	".txt": "text/plain",
+	".jpg": "image/jpeg",
+	".jpeg": "image/jpeg",
+	".png": "image/png",
+	".gif": "image/gif",
+	".js": "text/javascript",
+	".css": "text/css"
+}
+
+def process_image(filepath):
+	filedata = {}
+	basepath, ext = os.path.splitext(filepath)
+	filedata['data_type'] = '%s;base64' % mime_mapping[ext]
+	with open(filepath, 'rb') as f:
+		filedata['blob'] = f.read().encode('base64').replace('\n','')
+	filedata['path'] = filepath
+	return filedata
+
+def process_file(filepath):
+	image_types = ['png','jpg','gif']
+	for itype in image_types:
+		if filepath.endswith(itype):
+			return process_image(filepath)
+	filedata = {}
+	with open(filepath, 'r') as f:
+		filedata['blob'] = f.read().encode('base64').replace('\n','')
+	filedata['path'] = filepath
+	basepath, ext = os.path.splitext(filepath)
+	filedata['data_type'] = '%s;base64' % mime_mapping.get(ext, "text/plain")
+	return filedata
+
+def process_files(path):
+	file_datas = []
+	for root, subFolders, files in os.walk(path):
+		for file in files:
+			file_datas.append(process_file(os.path.join(root, file)))
+	return file_datas
+
+def bind_files(path):
+	import StringIO
+	manifest = []
+	data = process_files(path)
+	out = StringIO.StringIO()
+	for f in data:
+		manifest_entry = [f['path'], f['data_type'], out.tell()]
+		out.write(f['blob'])
+		manifest_entry.append(out.tell())
+		manifest.append(manifest_entry)
+	return out, manifest
+
+if __name__ == "__main__":
+    import json
+    bundle, manifest = bind_files(sys.argv[1])
+    with open('resourceful.js.template', 'r') as geode_template:
+    	template = geode_template.read()
+    	template = template.replace('{{manifest}}', json.dumps(manifest))
+    	template = template.replace('{{bundle}}', bundle.getvalue())
+    	bundle.close()
+    	with open('resourceful.js','w') as geode:
+    		geode.write(template)
+    print manifest
+
